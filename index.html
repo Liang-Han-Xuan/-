@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-music@5.0.3/files/noto-music-all-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -42,6 +41,7 @@ input[type=range]{flex:1;min-width:100px;accent-color:#6b4fa0;cursor:pointer}
 .btn-lbl{font-size:9px;opacity:.75;margin-top:1px}
 .key-hint{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:7px 14px;text-align:center;font-size:11px;color:#999;margin-top:8px}
 kbd{background:#fff;border:1px solid #ccc;border-radius:4px;padding:1px 5px;font-size:11px;color:#444}
+#preset-q-select{width:100%;box-sizing:border-box;padding:6px 8px;font-size:12px;border:1.5px solid #ddd;border-radius:6px;background:#fff;color:#333;}
 </style>
 </head>
 <body>
@@ -60,7 +60,15 @@ kbd{background:#fff;border:1px solid #ccc;border-radius:4px;padding:1px 5px;font
     <span style="font-size:11px;color:#aaa;margin-left:6px" id="bar-hint">2 小節</span>
   </div>
   <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
-    <span class="ctrl-label" style="margin-bottom:2px;">自訂題目（JSON 檔）</span>
+    <span class="ctrl-label" style="margin-bottom:2px;">選擇題組（repo 內建）</span>
+    <select id="preset-q-select" onchange="onPresetSelect(this.value)">
+      <option value="">隨機出題</option>
+      <option value="先備知識測驗題目.json">先備知識測驗題目</option>
+      <option value="操作熟悉階段題目.json">操作熟悉階段題目</option>
+    </select>
+  </div>
+  <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
+    <span class="ctrl-label" style="margin-bottom:2px;">或自行上傳題目（JSON 檔）</span>
     <input type="file" id="custom-q-input" accept="application/json,.json" onchange="loadCustomQuestions(this.files[0])" style="font-size:12px;max-width:230px;">
     <div id="custom-q-status" style="font-size:11px;color:#888;">目前：隨機出題</div>
     <button id="custom-q-clear" onclick="clearCustomQuestions()" style="display:none;font-size:12px;padding:4px 10px;border-radius:6px;border:1.5px solid #6b4fa0;background:#fff;color:#6b4fa0;cursor:pointer;margin-top:2px;">回到隨機出題</button>
@@ -154,6 +162,16 @@ function parseCustomFile(data){
     return q.bars.map(parseBarCode);
   });
 }
+function applyCustomQuestions(parsed,name){
+  customQuestions=parsed;
+  customSetName=name;
+  SESSION_TOTAL=parsed.length;
+  document.getElementById('custom-q-status').textContent='目前：題組「'+customSetName+'」（共 '+parsed.length+' 題）';
+  document.getElementById('custom-q-clear').style.display='inline-block';
+  setBarStepperEnabled(false);
+  sessionLog=[];questionCount=0;
+  reset();buildSeq();renderScore();markQuestionShown();
+}
 function loadCustomQuestions(file){
   if(!file)return;
   if(phase==='preparing'||phase==='recording'){alert('請先完成目前這一題，再載入自訂題目。');document.getElementById('custom-q-input').value='';return;}
@@ -162,15 +180,8 @@ function loadCustomQuestions(file){
     try{
       const data=JSON.parse(reader.result);
       const parsed=parseCustomFile(data);
-      customQuestions=parsed;
-      customSetName=data.name||file.name;
-      SESSION_TOTAL=parsed.length;
-      document.getElementById('custom-q-status').textContent='目前：自訂題組「'+customSetName+'」（共 '+parsed.length+' 題）';
-      document.getElementById('custom-q-clear').style.display='inline-block';
-      setBarStepperEnabled(false);
-      sessionLog=[];questionCount=0;
-      reset();buildSeq();renderScore();markQuestionShown();
-      // 題數與預設不符時不再跳通知，直接照題目檔的題數全部跑完即可。
+      document.getElementById('preset-q-select').value=''; // 上傳本機檔案時，下拉選單重設為「隨機出題」，避免顯示不一致
+      applyCustomQuestions(parsed,data.name||file.name);
     }catch(e){
       alert('題目檔案載入失敗：\n'+e.message);
       console.error('loadCustomQuestions error',e);
@@ -180,11 +191,36 @@ function loadCustomQuestions(file){
   reader.onerror=()=>{alert('檔案讀取失敗，請再試一次。');};
   reader.readAsText(file);
 }
+// 從 repo 內已存在的 json 檔案直接讀取（下拉選單選擇時觸發）
+function onPresetSelect(filename){
+  if(!filename){clearCustomQuestions();return;}
+  if(phase==='preparing'||phase==='recording'){
+    alert('請先完成目前這一題，再切換題組。');
+    document.getElementById('preset-q-select').value='';
+    return;
+  }
+  fetch(encodeURIComponent(filename))
+    .then(res=>{
+      if(!res.ok)throw new Error('找不到檔案：'+filename+'（HTTP '+res.status+'）');
+      return res.json();
+    })
+    .then(data=>{
+      const parsed=parseCustomFile(data);
+      document.getElementById('custom-q-input').value=''; // 清空本機上傳欄位，避免顯示不一致
+      applyCustomQuestions(parsed,data.name||filename);
+    })
+    .catch(e=>{
+      alert('題目檔案載入失敗：\n'+e.message);
+      console.error('onPresetSelect error',e);
+      document.getElementById('preset-q-select').value='';
+    });
+}
 function clearCustomQuestions(){
   customQuestions=null;customSetName='';
   SESSION_TOTAL=DEFAULT_SESSION_TOTAL;
   document.getElementById('custom-q-status').textContent='目前：隨機出題';
   document.getElementById('custom-q-clear').style.display='none';
+  document.getElementById('preset-q-select').value='';
   setBarStepperEnabled(true);
   sessionLog=[];questionCount=0;
   reset();buildSeq();renderScore();markQuestionShown();

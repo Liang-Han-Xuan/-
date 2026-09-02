@@ -59,6 +59,15 @@ kbd{background:#fff;border:1px solid #ccc;border-radius:4px;padding:1px 5px;font
     <button class="bar-btn" onclick="changeBars(1)">+</button>
     <span style="font-size:11px;color:#aaa;margin-left:6px" id="bar-hint">2 小節</span>
   </div>
+  </div>
+  <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
+    <span class="ctrl-label" style="margin-bottom:2px;">選擇題組（repo 內建）</span>
+    <select id="preset-q-select" onchange="onPresetSelect(this.value)">
+      <option value="">隨機出題</option>
+      <option value="先備知識測驗題目.json">先備知識測驗題目</option>
+      <option value="操作熟悉階段題目.json">操作熟悉階段題目</option>
+    </select>
+  </div>
   <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
     <span class="ctrl-label" style="margin-bottom:2px;">自訂題目（JSON 檔）</span>
     <input type="file" id="custom-q-input" accept="application/json,.json" onchange="loadCustomQuestions(this.files[0])" style="font-size:12px;max-width:230px;">

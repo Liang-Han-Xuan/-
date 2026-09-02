@@ -49,8 +49,8 @@ kbd{background:#fff;border:1px solid #ccc;border-radius:4px;padding:1px 5px;font
 <div id="settings-panel" style="display:none;position:fixed;top:56px;left:14px;z-index:999;background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:16px;min-width:260px;">
   <div class="ctrl-row">
     <span class="ctrl-label">BPM</span>
-    <input type="range" id="bpm-slider" min="40" max="160" value="60" oninput="onBpmChange(this.value)">
-    <span class="ctrl-val" id="bpm-val">60 BPM</span>
+    <input type="range" id="bpm-slider" min="40" max="160" value="80" oninput="onBpmChange(this.value)">
+    <span class="ctrl-val" id="bpm-val">80 BPM</span>
   </div>
   <div class="ctrl-row">
     <span class="ctrl-label">小節數</span>
@@ -58,14 +58,6 @@ kbd{background:#fff;border:1px solid #ccc;border-radius:4px;padding:1px 5px;font
     <div class="bar-num" id="bar-num">2</div>
     <button class="bar-btn" onclick="changeBars(1)">+</button>
     <span style="font-size:11px;color:#aaa;margin-left:6px" id="bar-hint">2 小節</span>
-  </div>
-  <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
-    <span class="ctrl-label" style="margin-bottom:2px;">選擇題組（repo 內建）</span>
-    <select id="preset-q-select" onchange="onPresetSelect(this.value)">
-      <option value="">隨機出題</option>
-      <option value="先備知識測驗題目.json">先備知識測驗題目</option>
-      <option value="操作熟悉階段題目.json">操作熟悉階段題目</option>
-    </select>
   </div>
   <div class="ctrl-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px;padding-top:10px;border-top:1px solid #eee;">
     <span class="ctrl-label" style="margin-bottom:2px;">自訂題目（JSON 檔）</span>
@@ -189,29 +181,6 @@ function loadCustomQuestions(file){
   reader.onerror=()=>{alert('檔案讀取失敗，請再試一次。');};
   reader.readAsText(file);
 }
-function onPresetSelect(filename){
-  if(!filename){clearCustomQuestions();return;}
-  if(phase==='preparing'||phase==='recording'){
-    alert('請先完成目前這一題，再切換題組。');
-    document.getElementById('preset-q-select').value='';
-    return;
-  }
-  fetch(encodeURIComponent(filename))
-    .then(res=>{
-      if(!res.ok)throw new Error('找不到檔案：'+filename+'（HTTP '+res.status+'）');
-      return res.json();
-    })
-    .then(data=>{
-      const parsed=parseCustomFile(data);
-      document.getElementById('custom-q-input').value=''; // 清空本機上傳欄位，避免顯示不一致
-      applyCustomQuestions(parsed,data.name||filename);
-    })
-    .catch(e=>{
-      alert('題目檔案載入失敗：\n'+e.message);
-      console.error('onPresetSelect error',e);
-      document.getElementById('preset-q-select').value='';
-    });
-}
 function clearCustomQuestions(){
   customQuestions=null;customSetName='';
   SESSION_TOTAL=DEFAULT_SESSION_TOTAL;
@@ -225,7 +194,7 @@ function setBarStepperEnabled(enabled){
   document.querySelectorAll('.bar-btn').forEach(b=>{b.disabled=!enabled;b.style.opacity=enabled?'1':'0.35';b.style.cursor=enabled?'pointer':'not-allowed';});
 }
 
-let BARS=2,BPM=60,BEAT=60/BPM,curBars=[],totalBeats=8;
+let BARS=2,BPM=80,BEAT=60/BPM,curBars=[],totalBeats=8;
 function buildSeq(){
   if(customQuestions&&customQuestions.length>0){
     // 只要載入了自訂題組，這個 session 就完全按照題組出題，
@@ -576,6 +545,29 @@ function renderScore(){
   line(NR+2,LY-22,NR+2,LY+22,'1.5');
   line(NR+8,LY-22,NR+8,LY+22,'5');
 }
+
+// 內建預設題目（直接寫死在檔案裡，開啟頁面時自動載入，等同於手動匯入這份 JSON）
+const DEFAULT_QUESTIONS_JSON={
+  "name": "先備測試3題",
+  "questions": [
+    { "bars": ["4 0 4 4", "4 4 4 0"] },
+    { "bars": ["4 0 0 4", "4 88 0 4"] },
+    { "bars": ["88 4 88 0", "0 88 4 88"] }
+  ]
+};
+(function loadDefaultQuestions(){
+  try{
+    const parsed=parseCustomFile(DEFAULT_QUESTIONS_JSON);
+    customQuestions=parsed;
+    customSetName=DEFAULT_QUESTIONS_JSON.name||'預設題組';
+    SESSION_TOTAL=parsed.length;
+    document.getElementById('custom-q-status').textContent='目前：自訂題組「'+customSetName+'」（共 '+parsed.length+' 題）';
+    document.getElementById('custom-q-clear').style.display='inline-block';
+    setBarStepperEnabled(false);
+  }catch(e){
+    console.error('預設題目載入失敗',e);
+  }
+})();
 
 buildSeq();renderScore();
 document.fonts.load('38px NotoMusic').then(()=>renderScore()).catch(()=>{});

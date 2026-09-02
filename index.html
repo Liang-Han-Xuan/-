@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-music@5.0.3/files/noto-music-all-400-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -223,7 +222,7 @@ function matchAll(seq,hits,beat){
   hs.filter(h=>!h.done).forEach(h=>{
     let bi=-1;
     nws.forEach((w,i)=>{if(w.done)return;if(h.t>=w.L&&h.t<w.R&&bi===-1){bi=i;}});
-    if(bi>=0){const w=nws[bi],diff=Math.round((h.t-w.idealT)*1000),abs=Math.abs(diff);h.done=true;h.ni=bi;h.diff=diff;w.done=true;if(abs<COLOR_YELLOW){w.diff=diff;w.abs=abs;const col=abs<COLOR_GREEN?'#4caf50':'#f0a030';w.result='Hit';h.result='Hit';h.color=col;}else{if(!w.result)w.result='RedFA';h.result='FA';h.color='#e24b4a';}}
+    if(bi>=0){const w=nws[bi],diff=Math.round((h.t-w.idealT)*1000),abs=Math.abs(diff);h.done=true;h.ni=bi;h.diff=diff;w.done=true;w.diff=diff;w.abs=abs;const col=abs<COLOR_GREEN?'#4caf50':(abs<COLOR_YELLOW?'#f0a030':'#e24b4a');w.result='Hit';h.result='Hit';h.color=col;}
     else{h.done=true;h.result='FA';h.color='#e24b4a';}
   });
   nws.forEach(w=>{if(!w.done)w.result='Miss';});

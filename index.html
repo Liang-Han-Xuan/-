@@ -189,6 +189,29 @@ function loadCustomQuestions(file){
   reader.onerror=()=>{alert('檔案讀取失敗，請再試一次。');};
   reader.readAsText(file);
 }
+function onPresetSelect(filename){
+  if(!filename){clearCustomQuestions();return;}
+  if(phase==='preparing'||phase==='recording'){
+    alert('請先完成目前這一題，再切換題組。');
+    document.getElementById('preset-q-select').value='';
+    return;
+  }
+  fetch(encodeURIComponent(filename))
+    .then(res=>{
+      if(!res.ok)throw new Error('找不到檔案：'+filename+'（HTTP '+res.status+'）');
+      return res.json();
+    })
+    .then(data=>{
+      const parsed=parseCustomFile(data);
+      document.getElementById('custom-q-input').value=''; // 清空本機上傳欄位，避免顯示不一致
+      applyCustomQuestions(parsed,data.name||filename);
+    })
+    .catch(e=>{
+      alert('題目檔案載入失敗：\n'+e.message);
+      console.error('onPresetSelect error',e);
+      document.getElementById('preset-q-select').value='';
+    });
+}
 function clearCustomQuestions(){
   customQuestions=null;customSetName='';
   SESSION_TOTAL=DEFAULT_SESSION_TOTAL;
